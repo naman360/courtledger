@@ -8,10 +8,12 @@ module.exports = {
   contracts_build_directory: path.join(__dirname, "client/src/contracts"),
   networks: {
     develop: {
-      port: 8545
+      host: "localhost",
+      port: 8545,
+      network_id: "*", // Match any network id
     },
     kovan: {
-      provider: function() {
+      provider: function () {
         return new HDWalletProvider(
           process.env.MNEMONIC,
           "https://kovan.infura.io/v3/d6567ea751014dc6b2426e02cd9ac714"
@@ -19,10 +21,10 @@ module.exports = {
       },
       network_id: 42,
       gas: 4500000,
-      gasPrice: 10000000000
+      gasPrice: 10000000000,
     },
     matic: {
-      provider: function() {
+      provider: function () {
         return new HDWalletProvider(
           process.env.MNEMONIC,
           "https://testnet2.matic.network"
@@ -30,7 +32,7 @@ module.exports = {
       },
       network_id: 8995,
       gas: 4500000,
-      gasPrice: 10000000000
-    }
-  }
+      gasPrice: 10000000000,
+    },
+  },
 };

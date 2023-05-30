@@ -8,8 +8,8 @@ import credentials from "../middleware/credentials";
 import Instance from "../middleware/web3";
 import axios from "axios";
 import ShowModal from "./modal";
+import { v4 as uuidv4 } from "uuid";
 const EthCrypto = require("eth-crypto");
-
 class Layout extends Component {
   constructor(props) {
     super(props);
@@ -30,8 +30,9 @@ class Layout extends Component {
       temp_public_key:
         "bf6b78a26b7abc11f9e59da81e2fade5be67de7af914df64119598d70536862b87bc1344db520d902fc0468f8b262b7e14b1a1fef38a5a9a45c6ae4f4c8a993e",
       temp_private_key:
-        "0xc90624630837b22cd1dde951bf441c7f4636a4e1b7d5918f3764b14b82d17456"
+        "0xc90624630837b22cd1dde951bf441c7f4636a4e1b7d5918f3764b14b82d17456",
     };
+    this.cld = null;
   }
   async componentDidMount() {
     let acc = await Instance.web3.eth.getAccounts();
@@ -66,7 +67,7 @@ class Layout extends Component {
         actual.push({
           Name: data[i].fileName.split("/")[1],
           Hash: data[i].fileHash,
-          verfiledBoolean: 0
+          verfiledBoolean: 0,
         });
       }
     }
@@ -77,7 +78,7 @@ class Layout extends Component {
     let response = await axios({
       method: "post",
       url: credentials.CUSTOM_URL + "/moibit/v0/listfiles",
-      data: { path: "/" }
+      data: { path: "/" },
     });
 
     let data = [];
@@ -103,7 +104,7 @@ class Layout extends Component {
               data.push({
                 Name: response.data.data.Entries[i].Name,
                 Hash: response.data.data.Entries[i].Hash,
-                verfiledBoolean: 0
+                verfiledBoolean: 0,
               });
               this.setState({ fileList: data });
             }
@@ -112,49 +113,47 @@ class Layout extends Component {
       }
     });
   };
-  handleSubmit = async e => {
+  handleSubmit = async (e) => {
     e.preventDefault();
     if (this.state.encrypted_file_string !== "") {
       let formData = new FormData();
-      var string = JSON.stringify(this.state.encrypted_file_string);
-      console.log(this.state.encrypted_file_string);
-      var blob = new Blob([string], { type: "text/plain" });
-      var file = new File([blob], "document.txt", { type: "text/plain" });
-      console.log(file);
-      formData.append("file", file);
-      formData.append("fileType", "/" + this.state.fileType);
-      formData.append("fileName", "/" + this.state.file.name);
-      this.setState({ loading: true });
+      const file = this.state.file;
+      formData.append("file", this.state.file);
+      formData.append("upload_preset", "o5rngmug");
+      const fileName = uuidv4();
+      formData.append("upload_name", fileName);
 
-      let response = await axios({
-        method: "post",
-        url: credentials.CUSTOM_URL + "/moibit/v0/writefile",
-        data: formData
+      this.setState({ loading: true });
+      // https://res.cloudinary.com/moibit/image/upload/v1684528022/testfile.png
+
+      axios.post("http://localhost:8000/upload", formData).then((resp) => {
+        console.log(resp);
+        this.setState({ loading: false });
+        if (localStorage.getItem(`case-${this.props.location.state.caseId}`)) {
+          const evidences = JSON.parse(
+            localStorage.getItem(`case-${this.props.location.state.caseId}`)
+          );
+
+          evidences.push({ filename: file.name, filehash: fileName });
+          localStorage.setItem(
+            `case-${this.props.location.state.caseId}`,
+            JSON.stringify(evidences)
+          );
+          document.location.reload();
+
+          console.log(evidences);
+        } else {
+          const evidences = [];
+          evidences.push({ filename: file.name, filehash: fileName });
+          localStorage.setItem(
+            `case-${this.props.location.state.caseId}`,
+            JSON.stringify(evidences)
+          );
+          document.location.reload();
+
+          console.log(evidences);
+        }
       });
-      const actualFileName =
-        credentials.API_KEY +
-        "" +
-        response.data.data.Path +
-        "" +
-        response.data.data.Name;
-      await Instance.Config.methods
-        .setHash(actualFileName, response.data.data.Hash)
-        .send({ from: this.state.accountId });
-      await this.uploadEvidence(
-        this.props.location.state.caseId,
-        response.data.data.Hash,
-        "text"
-      );
-      if (this.state.accountId === credentials.ADMIN) {
-        this.getALLHashes();
-        this.setState({ loading: false });
-      } else {
-        this.getALLHashes();
-        this.setState({ loading: false });
-      }
-      this.setState({ loading: false });
-    } else {
-      this.setState({ fieldReq: true });
     }
   };
   // handleSubmit = async (e) => {
@@ -205,11 +204,11 @@ class Layout extends Component {
     let response = await axios({
       method: "post",
       url: credentials.CUSTOM_URL + "/moibit/v0/listfiles",
-      data: { path: "/" }
+      data: { path: "/" },
     });
 
     let allFiles = response.data.data.Entries;
-    const index1 = allFiles.map(e => e.Name).indexOf(name);
+    const index1 = allFiles.map((e) => e.Name).indexOf(name);
     let checkingHash = "";
     if (index1 !== -1) {
       checkingHash = allFiles[index1].Hash;
@@ -217,12 +216,12 @@ class Layout extends Component {
 
     let successs = true;
     let files = this.state.fileList;
-    const index = files.map(e => e.Name).indexOf(name);
+    const index = files.map((e) => e.Name).indexOf(name);
     if (files[index].verfiledBoolean === 0) {
       files[index] = {
         Name: name,
         Hash: hash,
-        verfiledBoolean: 2
+        verfiledBoolean: 2,
       };
       this.setState({ fileList: files });
 
@@ -235,14 +234,14 @@ class Layout extends Component {
         files[index] = {
           Name: name,
           Hash: hash,
-          verfiledBoolean: 1
+          verfiledBoolean: 1,
         };
         this.setState({ fileList: files });
       } else {
         files[index] = {
           Name: name,
           Hash: hash,
-          verfiledBoolean: -1
+          verfiledBoolean: -1,
         };
         this.setState({ fileList: files });
         successs = false;
@@ -273,53 +272,53 @@ class Layout extends Component {
         url: url,
         responseType: responseType,
         data: {
-          hash: filehash
-        }
+          hash: filehash,
+        },
       })
-        .then(response => {
+        .then((response) => {
           if (typeof response.data == "string") {
             this.setState({
               readFileIframe: response.data,
               fileType: response.headers["content-type"],
               fileName: fileName,
-              modalOpen: true
+              modalOpen: true,
             });
           } else {
             console.log(response.data);
             this.runDecrypt(this.state.temp_private_key, response.data)
-              .then(e => {
+              .then((e) => {
                 console.log(this.convertBase64toBlob(e, "text/plain"));
                 this.downloadBlob(e, "text/plain");
               })
-              .catch(err => {
+              .catch((err) => {
                 console.error("ERRORRRR", err);
               });
             this.setState({
               readFileIframe: window.URL.createObjectURL(
                 new Blob([response.data], {
-                  type: response.headers["content-type"]
+                  type: response.headers["content-type"],
                 })
               ),
               fileType: response.headers["content-type"],
               fileName: fileName,
-              modalOpen: true
+              modalOpen: true,
             });
           }
         })
-        .then(response => {
+        .then((response) => {
           if (typeof response.data == "string") {
             this.setState({
               readFileIframe: response.data,
               fileType: response.headers["content-type"],
               fileName: fileName,
-              modalOpen: true
-            }).catch(error => {
+              modalOpen: true,
+            }).catch((error) => {
               console.log(error);
             });
           } else {
             console.log(response.data);
             this.runDecrypt(this.state.temp_private_key, response.data).then(
-              e => {
+              (e) => {
                 console.log(this.convertBase64toBlob(e, "text/plain"));
                 // this.downloadBlob(e, 'text/plain')
               }
@@ -327,16 +326,16 @@ class Layout extends Component {
             this.setState({
               readFileIframe: window.URL.createObjectURL(
                 new Blob([response.data], {
-                  type: response.headers["content-type"]
+                  type: response.headers["content-type"],
                 })
               ),
               fileType: response.headers["content-type"],
               fileName: fileName,
-              modalOpen: true
+              modalOpen: true,
             });
           }
         })
-        .catch(error => {
+        .catch((error) => {
           console.log(error);
         });
     } else {
@@ -344,7 +343,7 @@ class Layout extends Component {
         readFileIframe: "The file got modified off-chain",
         fileType: "text/plain",
         fileName: "Alert!",
-        modalOpen: true
+        modalOpen: true,
       });
     }
   };
@@ -385,7 +384,7 @@ class Layout extends Component {
       byteArrays.push(byteArray);
     }
     var blob = new Blob(byteArrays, {
-      type: contentType
+      type: contentType,
     });
     return blob;
   }
@@ -408,10 +407,10 @@ class Layout extends Component {
     await court.methods
       .uploadEvidence(caseId, filehash, filetype)
       .send({ from: account, gas: GAS, gasPrice: GAS_PRICE })
-      .then(r => {
+      .then((r) => {
         console.log(r);
       })
-      .catch(e => {
+      .catch((e) => {
         console.log(e);
       });
   }
@@ -420,7 +419,7 @@ class Layout extends Component {
     const custom_header = {
       backgroundColor: "#222222",
       color: "#fbfbfb",
-      border: "1px solid #fbfbfb"
+      border: "1px solid #fbfbfb",
     };
     return (
       <div className="layoutBG">
@@ -441,7 +440,7 @@ class Layout extends Component {
               color: "white",
               paddingBottom: "20px",
               textAlign: "center",
-              fontWeight: "bold"
+              fontWeight: "bold",
             }}
           >
             CourtLedger
@@ -459,7 +458,7 @@ class Layout extends Component {
           ) : this.state.user === 2 ? (
             <>
               <Form
-                onSubmit={event => this.handleSubmit(event)}
+                onSubmit={(event) => this.handleSubmit(event)}
                 encType="multipart/form-data"
               >
                 <Table
@@ -469,7 +468,7 @@ class Layout extends Component {
                     marginTop: "20px",
                     marginBottom: "40px",
                     background: "#f2f2f2",
-                    color: "#222222"
+                    color: "#222222",
                   }}
                 >
                   {/* IF NOT ADMIN HIDE */}
@@ -480,14 +479,14 @@ class Layout extends Component {
                           <Table.Cell textAlign="center" colSpan="2">
                             <Input
                               type="file"
-                              onChange={e => {
+                              onChange={(e) => {
                                 const _file = e.target.files[0];
                                 const type = _file.type;
                                 this.setState({ file: _file });
                                 // BASE64 ENCODING
                                 var reader = new FileReader();
-                                reader.onload = (theFile => {
-                                  return e => {
+                                reader.onload = ((theFile) => {
+                                  return (e) => {
                                     var binaryData = e.target.result;
                                     var base64String = window.btoa(binaryData); // encoded to base64
                                     // console.log(base64String)
@@ -496,10 +495,10 @@ class Layout extends Component {
                                     this.runEncrypt(
                                       this.state.temp_public_key,
                                       this.state.fileBase64
-                                    ).then(encoded => {
+                                    ).then((encoded) => {
                                       // console.log(encoded);
                                       this.setState({
-                                        encrypted_file_string: encoded
+                                        encrypted_file_string: encoded,
                                       });
                                     });
                                   };
@@ -512,7 +511,7 @@ class Layout extends Component {
                                 this.state.fieldReq
                                   ? {
                                       border: "2px solid red",
-                                      borderRadius: "5px"
+                                      borderRadius: "5px",
                                     }
                                   : {}
                               }
@@ -556,7 +555,18 @@ class Layout extends Component {
               </Form>
               <div className="content-container">
                 <TableList
-                  fileList={this.state.fileList}
+                  fileList={JSON.parse(
+                    localStorage.getItem(
+                      `case-${this.props?.location?.state?.caseId}`
+                    )
+                  )}
+                  key={
+                    JSON.parse(
+                      localStorage.getItem(
+                        `case-${this.props?.location?.state?.caseId}`
+                      )
+                    )?.length
+                  }
                   readFile={this.readFile}
                 />
               </div>
@@ -564,7 +574,18 @@ class Layout extends Component {
           ) : (
             <div className="content-container">
               <TableList
-                fileList={this.state.fileList}
+                fileList={JSON.parse(
+                  localStorage.getItem(
+                    `case-${this.props?.location?.state?.caseId}`
+                  )
+                )}
+                key={
+                  JSON.parse(
+                    localStorage.getItem(
+                      `case-${this.props?.location?.state?.caseId}`
+                    )
+                  )?.length
+                }
                 readFile={this.readFile}
               />
             </div>

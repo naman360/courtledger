@@ -35,6 +35,7 @@ class Dapp extends Component {
 
     const networkId = await web3.eth.net.getId();
     const networkData = Court.networks[networkId];
+    console.log(networkData, networkId);
     if (networkData) {
       const court = new web3.eth.Contract(Court.abi, networkData.address);
       this.setState({ court });
@@ -51,10 +52,10 @@ class Dapp extends Component {
     await court.methods
       .addEncryptedKey(isLawyer, ljId, caseId, key)
       .send({ from: account, gas: GAS, gasPrice: GAS_PRICE })
-      .then(r => {
+      .then((r) => {
         console.log(r);
       })
-      .catch(e => {
+      .catch((e) => {
         console.log(e);
       });
   }
@@ -74,7 +75,7 @@ class Dapp extends Component {
       loading: true,
       court: "",
       GAS: "",
-      GAS_PRICE: ""
+      GAS_PRICE: "",
     };
   }
 
@@ -83,13 +84,16 @@ class Dapp extends Component {
       court: this.state.court,
       account: this.state.account,
       GAS: this.state.GAS,
-      GAS_PRICE: this.state.GAS_PRICE
+      GAS_PRICE: this.state.GAS_PRICE,
     };
     return (
       <div>
         <Nav />
-        {this.state.loading ? (<p>LOADING</p>) : (<Main passableItems={passableItems} />)}
-
+        {this.state.loading ? (
+          <p>LOADING</p>
+        ) : (
+          <Main passableItems={passableItems} />
+        )}
       </div>
     );
   }
